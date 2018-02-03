@@ -1,16 +1,12 @@
 package com.flycamel.vertxjcache;
 
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.hazelcast.HazelcastAutoConfiguration;
-import org.springframework.cache.annotation.EnableCaching;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
-@SpringBootApplication(exclude = {HazelcastAutoConfiguration.class})
-@EnableCaching
+@SpringBootApplication
 public class VertxJcacheApplication {
     private HazelcastResolver hazelcastResolver;
 

@@ -1,27 +1,60 @@
 package com.flycamel.vertxjcache;
 
+import com.hazelcast.core.HazelcastInstance;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
+import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-import javax.cache.Cache;
-import javax.cache.CacheManager;
-import javax.cache.configuration.MutableConfiguration;
 
 @Component
 public class HazelcastResolver {
-    private CacheManager cacheManagerForResolver;
+
+    private CacheManager cacheManager;
+    private HazelcastInstance hazelcastInstance;
+    private ExVerticle exVerticle;
+    private HttpVerticle httpVerticle;
 
     @Resource
-    public void setCacheManagerForResolver(CacheManager cacheManagerForResolver) {
-        this.cacheManagerForResolver = cacheManagerForResolver;
+    public void setCacheManager(CacheManager cacheManager) {
+        this.cacheManager = cacheManager;
+    }
+
+    @Resource
+    public void setHazelcastInstance(HazelcastInstance hazelcastInstance) {
+        this.hazelcastInstance = hazelcastInstance;
+    }
+
+    @Resource
+    public void setExVerticle(ExVerticle exVerticle) {
+        this.exVerticle = exVerticle;
+    }
+
+    @Resource
+    public void setHttpVerticle(HttpVerticle httpVerticle) {
+        this.httpVerticle = httpVerticle;
     }
 
     public void start() {
         System.out.println("Hazelcast start...");
 
-        Cache<String, String> stringCache = cacheManagerForResolver.createCache("stringCache", new MutableConfiguration<>());
-        stringCache.put("key1", "value1");
+        ClusterManager mgr = new HazelcastClusterManager(hazelcastInstance);
+        VertxOptions options = new VertxOptions().setClusterManager(mgr);
+        Vertx.clusteredVertx(options, res -> {
+            if (res.succeeded()) {
+                Vertx vertx = res.result();
+                vertx.deployVerticle(exVerticle, ar -> {
+                    System.out.println("exVerticle deployed..");
+                    vertx.eventBus().send("test", "test message from resolver");
+                });
 
-        System.out.println(stringCache.get("key1"));
+                vertx.deployVerticle(httpVerticle, ar -> {
+                    System.out.println("httpVerticle deployed..");
+                });
+            }
+        });
     }
 }
